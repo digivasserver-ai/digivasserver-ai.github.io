@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Digivas — AI systems, Kotlin/Android, reliable tooling</title>
+<meta name="description" content="Digivas (Digivasconnect PTY) builds agent memory tooling, Android/Kotlin apps, and shell primitives that survive Android's signal 36. Evidence-first engineering notes from an ARM64 phone lab.">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="wrap">
+<header class="site">
+  <p class="kicker">Digivasconnect PTY · South Africa</p>
+  <h1>AI systems, Kotlin/Android, and tooling that survives the platform.</h1>
+  <p class="lede">I build agent memory, security boundaries and reproducible Android builds — mostly from an ARM64 phone instead of a laptop. Everything here is measured, and the limits are written down next to the results.</p>
+</header>
+<nav class="site">
+  <a href="#work">Work</a>
+  <a href="#writing">Writing</a>
+  <a href="#about">About</a>
+  <a href="https://github.com/digivasserver-ai">GitHub</a>
+  <a href="mailto:divivas.server@gmail.com">Email</a>
+</nav>
+<main>
+
+<h2 id="work">Selected work</h2>
+
+<div class="card">
+  <h3><a href="https://github.com/digivasserver-ai/durable-sh">durable-sh</a></h3>
+  <p>Single-file bash library for environments that kill short-lived processes: inherited signal immunity, atomic writes, parent-shell retries, git lock recovery. 18/18 tests, tagged releases.</p>
+  <p class="meta"><span class="tag">shell</span><span class="tag">android</span><span class="tag">reliability</span>MIT</p>
+</div>
+
+<div class="card">
+  <h3><a href="https://github.com/digivasserver-ai/mcp-audit-toolkit">mcp-audit-toolkit</a></h3>
+  <p>Audits MCP servers the way a client actually talks to them: credential-fingerprint leak scanning, stdio health probes, and the two failure classes that silently break MCP tools on Linux.</p>
+  <p class="meta"><span class="tag">mcp</span><span class="tag">security</span><span class="tag">linux</span>MIT</p>
+</div>
+
+<div class="card">
+  <h3><a href="https://github.com/digivasserver-ai/PROXY-JOURNAL">PROXY-JOURNAL</a></h3>
+  <p>Portable development journal for LLM sessions — identity, memory and progress logs that move between models with integrity checks, so a new session never starts from a blank slate.</p>
+  <p class="meta"><span class="tag">agents</span><span class="tag">memory</span><span class="tag">javascript</span>MIT</p>
+</div>
+
+<div class="card">
+  <h3><a href="https://github.com/digivasserver-ai/ci-repro">ci-repro</a></h3>
+  <p>Gradle CI reference: build, artifact, release, dependency-submission and CodeQL workflows with REUSE-compliant license headers — used to reproduce Android builds off-device.</p>
+  <p class="meta"><span class="tag">gradle</span><span class="tag">ci</span><span class="tag">codeql</span>Apache-2.0</p>
+</div>
+
+<h2 id="writing">Writing</h2>
+
+<div class="card">
+  <h3><a href="signal-36.html">Signal 36: the Android profiler that kills your shell scripts</a></h3>
+  <p>A 15% random failure rate on <code>git</code>, <code>python3</code> and <code>rpm</code> turned out to be <code>traced_perf</code> sending <code>BIONIC_SIGNAL_PROFILER</code>. Measured kill rates, the one-line fix, and what is still unexplained.</p>
+  <p class="meta">Android · debugging · 9 min read</p>
+</div>
+
+<div class="card">
+  <h3><a href="arm64.html">Building Android apps on an ARM64 phone</a></h3>
+  <p>Google's Linux SDK tools are x86-64 only. Here is the aapt2 override, the compileSdk 37 hand-install, and the Gradle traps that cost the most time.</p>
+  <p class="meta">Android · build systems · 6 min read</p>
+</div>
+
+<h2 id="about">About</h2>
+<p>I work on practical tools for AI-assisted development and Android: durable agent memory, clear security boundaries, reproducible builds, and small fixes backed by tests. I separate working prototypes from shipped features, and I mark what I have not verified.</p>
+<p>My daily test environment is Android 16 on an aarch64 openSUSE Tumbleweed proot terminal with ADB and Shizuku — which exposes platform assumptions that desktop-only builds miss.</p>
+
+<h2>Elsewhere</h2>
+<ul>
+  <li><a href="https://github.com/digivasserver-ai">github.com/digivasserver-ai</a> — code and releases</li>
+  <li><a href="https://x.com/DIGIvasCoNNeCt">X / Twitter</a></li>
+  <li><a href="mailto:divivas.server@gmail.com">divivas.server@gmail.com</a> — security reports, collaboration</li>
+</ul>
+
+</main>
+<footer class="site">
+  <p>© 2026 Digivasconnect PTY (LTD). Code is MIT or Apache-2.0 unless a repository says otherwise.</p>
+</footer>
+</div>
+</body>
+</html>

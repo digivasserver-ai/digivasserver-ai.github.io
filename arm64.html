@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Building Android apps on an ARM64 phone — Digivas</title>
+<meta name="description" content="Google's Linux Android SDK tools are x86-64 only. The aapt2 override, compileSdk 37 hand-install, and Gradle traps that cost the most time when building on an ARM64 device.">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="wrap">
+<header class="site">
+  <p class="kicker">Android · build systems</p>
+  <h1>Building Android apps on an ARM64 phone</h1>
+  <p class="lede">No laptop, no emulator, no x86 machine. Gradle on a Galaxy S24 FE inside Termux — and the four traps that each cost an afternoon.</p>
+</header>
+<nav class="site">
+  <a href="index.html">← Home</a>
+  <a href="signal-36.html">Signal 36</a>
+  <a href="mailto:divivas.server@gmail.com">Email</a>
+</nav>
+<main>
+
+<h2>Why this is not supposed to work</h2>
+<p>Google ships its Linux Android SDK build tools for x86-64. On aarch64, <code>sdkmanager</code> installs fine, the platform zips unpack fine, and then the build dies with:</p>
+<pre><code>AAPT2 aapt2-9.1.1-14792394-linux Daemon #0: Daemon startup failed</code></pre>
+<p>That message appears repeatedly across <code>process*DebugResources</code> and library AAR transforms. It is not a resource bug. The <code>aapt2</code> binary that Gradle fetched from Maven is an x86-64 ELF.</p>
+
+<h2>Trap 1 — the aapt2 barrier</h2>
+<p>Everything else in the toolchain is Java and therefore architecture-independent: <code>d8</code>, <code>r8</code>, <code>zipalign</code>, <code>apksigner</code>. <code>aapt2</code> is the only native binary in the critical path, so it is the only one that needs replacing.</p>
+<p>Termux ships an aarch64 build. Point Gradle at it in <code>gradle.properties</code>:</p>
+<pre><code>android.aapt2FromMavenOverride=/data/data/com.termux/files/usr/bin/aapt2</code></pre>
+<p>Verify it is the right architecture before trusting it:</p>
+<pre><code>$ aapt2 version
+2.20-android-16.0.0_r4</code></pre>
+<div class="note">Add this line the moment a project fails with “Daemon startup failed”. Debugging resources before checking the binary's architecture is the most common wasted hour in this setup.</div>
+
+<h2>Trap 2 — compileSdk 37 is invisible to sdkmanager</h2>
+<p><code>sdkmanager "platforms;android-37"</code> answers “Failed to find package”, which reads like the platform does not exist. It does. Google moved the repository XML to a v4 schema that older <code>cmdline-tools</code> cannot parse, and the package is now named with a minor version: <code>platform-37.2_r01.zip</code>.</p>
+<pre><code>curl -sL -o /tmp/platform-37.2.zip \
+  https://dl.google.com/android/repository/platform-37.2_r01.zip
+unzip -q /tmp/platform-37.2.zip -d "$ANDROID_HOME/platforms"</code></pre>
+<p>The zip nests one <code>android-37.2/</code> level. Move its contents up, or AGP will not see the platform. Then keep <code>compileSdk = "37"</code> — AGP 9.x resolves the <code>.2</code> minor itself.</p>
+<p>Do not “fix” a missing SDK by lowering <code>compileSdk</code>. Modern AndroidX artifacts check the AAR metadata and refuse to build: <code>material-ripple 1.12.0-beta01</code> requires 37, and downgrading produces 14 AAR metadata errors instead of one missing-package error.</p>
+
+<h2>Trap 3 — toolchain spec is not JAVA_HOME</h2>
+<p>Setting <code>JAVA_HOME</code> to JDK 21 does not satisfy a Gradle toolchain request for <code>languageVersion = 17</code>. Gradle looks for an installed 17 and fails with a message that suggests the JDK is missing entirely. On Termux the JDKs live under:</p>
+<pre><code>/data/data/com.termux/files/usr/lib/jvm/java-17-openjdk
+/data/data/com.termux/files/usr/lib/jvm/java-21-openjdk</code></pre>
+<pre><code>org.gradle.java.installations.paths=/data/data/com.termux/files/usr/lib/jvm/java-17-openjdk</code></pre>
+<p>Guessing a Linux distribution path (<code>/usr/lib64/jvm/...</code>) is the usual failure: it does not exist in the proot, and Gradle reports the same “no matching toolchain” error.</p>
+
+<h2>Trap 4 — the configuration cache replays stale failures</h2>
+<p>After fixing the JDK path, the identical error comes back. The configuration cache stored the failed task graph and replays it. After any toolchain or environment change:</p>
+<pre><code>rm -rf .gradle/configuration-cache
+./gradlew assembleDebug --no-daemon --no-configuration-cache</code></pre>
+<p>Also disable the daemon in a container or proot: a daemon that outlives the session holds stale environment variables.</p>
+
+<h2>What actually worked</h2>
+<ul>
+  <li>A Kotlin/Compose Android app (a CloudStream fork) configured, compiled and installed on-device with the aapt2 override.</li>
+  <li><code>d8</code>/<code>r8</code>/<code>apksigner</code> run unmodified — they are JVM tools.</li>
+  <li>APK signing and installation via ADB from the same shell.</li>
+</ul>
+
+<h2>What did not</h2>
+<ul>
+  <li>A full APK plus Rust build of UpgradeAll on this host has <strong>not</strong> passed. The build guide is proposed upstream as a PR; the claim is deliberately limited to the module that compiled.</li>
+  <li>16 KB page-size targets and NDK builds need a native toolchain (Termux clang works for JNI, the full NDK does not ship aarch64 host binaries).</li>
+</ul>
+
+<h2>Checklist</h2>
+<table>
+  <tr><th>symptom</th><th>cause</th><th>fix</th></tr>
+  <tr><td>“aapt2 Daemon startup failed”</td><td>x86-64 aapt2 from Maven</td><td><code>android.aapt2FromMavenOverride</code></td></tr>
+  <tr><td>“Failed to find package android-37”</td><td>v4 repo XML, minor-version naming</td><td>hand-install <code>platform-37.2_r01.zip</code></td></tr>
+  <tr><td>“No matching toolchain”</td><td><code>JAVA_HOME</code> ≠ toolchain 17</td><td><code>org.gradle.java.installations.paths</code></td></tr>
+  <tr><td>Same error after a fix</td><td>configuration cache replay</td><td><code>--no-configuration-cache</code></td></tr>
+</table>
+
+</main>
+<footer class="site">
+  <p>Environment: Galaxy S24 FE (SM-S721B), Android 16, aarch64 openSUSE Tumbleweed proot under Termux, JDK 17/21, AGP 9.1.1. <a href="index.html">Back to home</a></p>
+</footer>
+</div>
+</body>
+</html>

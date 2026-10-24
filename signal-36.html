@@ -1,0 +1,118 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Signal 36: the Android profiler that kills your shell scripts — Digivas</title>
+<meta name="description" content="Why git, python3 and rpm randomly exit 164 on Android: traced_perf sends BIONIC_SIGNAL_PROFILER. Measured kill rates, the one-line fix, and the honest limits.">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="wrap">
+<header class="site">
+  <p class="kicker">Android · debugging</p>
+  <h1>Signal 36: the Android profiler that kills your shell scripts</h1>
+  <p class="lede">Roughly one in eight short-lived processes on my phone died with exit 164 and “Real-time signal 2”. It was not proot, not memory pressure, and not a bug in my scripts. It was the platform profiler.</p>
+</header>
+<nav class="site">
+  <a href="index.html">← Home</a>
+  <a href="https://github.com/digivasserver-ai/durable-sh">durable-sh</a>
+  <a href="mailto:divivas.server@gmail.com">Email</a>
+</nav>
+<main>
+
+<h2>The symptom</h2>
+<p>Inside an openSUSE Tumbleweed proot on a Galaxy S24 FE, ordinary commands failed at random:</p>
+<pre><code>$ git rev-list --count HEAD
+Real-time signal 2
+$ echo $?
+164</code></pre>
+<p>It hit <code>git</code>, <code>python3</code>, <code>rpm</code> scriptlets, <code>tar</code> and <code>sleep</code>. Three things made it hard to reason about:</p>
+<ul>
+  <li><strong>It was not proot-specific.</strong> A plain app sandbox with no ptrace printed the same thing.</li>
+  <li><strong><code>setsid</code> and <code>nohup</code> never helped.</strong> They guard against parent death; this is not a parent.</li>
+  <li><strong>Retrying made it worse, not better.</strong> Every retry spawns more processes, and exposure tracks process count.</li>
+</ul>
+
+<h2>What the signal actually is</h2>
+<p>Android's bionic reserves real-time signals for internal use. From <code>libc/platform/bionic/reserved_signals.h</code>:</p>
+<pre><code>// 32 (__SIGRTMIN + 0) POSIX timers
+// 33 (__SIGRTMIN + 1) libbacktrace
+// 34 (__SIGRTMIN + 2) libcore
+// 35 (__SIGRTMIN + 3) debuggerd
+// 36 (__SIGRTMIN + 4) platform profilers (heapprofd, traced_perf)
+// 37 (__SIGRTMIN + 5) coverage</code></pre>
+<p>So kernel signal 36 is <code>BIONIC_SIGNAL_PROFILER</code>. The naming confusion is a base mismatch: bionic reserves 32 and 33, so userspace displays kernel 36 as <code>SIGRTMIN+2</code> — “Real-time signal 2”. One signal, two numbering bases.</p>
+<p>The sender is on the device. <code>/system/etc/init/traced_perf.rc</code> says it outright:</p>
+<pre><code># KILL capability for sending BIONIC_SIGNAL_PROFILER.
+service traced_perf /system/bin/traced_perf
+    user nobody
+    group nobody readproc readtracefs
+    capabilities KILL DAC_READ_SEARCH</code></pre>
+<p><code>traced_perf</code> signals a process to walk its stacks. The default disposition of a real-time signal is <em>terminate</em>, and a native binary that never installs a handler for 36 dies on receipt. Bash reports <code>128 + 36 = 164</code>.</p>
+
+<div class="note"><strong>Why this explains everything else:</strong> processes under ~20 ms finish before a profiling window opens; longer ones get caught; <code>setsid</code> changes nothing because the sender is not the parent; and the rate drifts because sampling windows come and go.</div>
+
+<h2>Measurements: risk is a step function, then a plateau</h2>
+<p>All probes ran as children of an agent shell, with <code>sleep</code> (≈zero CPU) so CPU time is ruled out as the variable.</p>
+<table>
+  <tr><th>lifetime</th><th>killed</th><th>rate</th></tr>
+  <tr><td><code>/bin/true</code></td><td>0/30</td><td>0%</td></tr>
+  <tr><td><code>sleep 0.001</code></td><td>0/40</td><td>0%</td></tr>
+  <tr><td><code>sleep 0.01</code></td><td>0/40</td><td>0%</td></tr>
+  <tr><td><code>sleep 0.05</code></td><td>1/40</td><td>2%</td></tr>
+  <tr><td><code>sleep 0.2</code></td><td>6/40</td><td>15%</td></tr>
+  <tr><td><code>sleep 1.0</code></td><td>2/25</td><td>8%</td></tr>
+  <tr><td><code>sleep 3.0</code></td><td>3/25</td><td>12%</td></tr>
+</table>
+<p>Below ~20 ms a process is effectively immune. Between 20 ms and 200 ms risk climbs steeply. Past ~200 ms it <strong>plateaus at 10–15% and stops climbing</strong> — <code>sleep 3.0</code> is no more at risk than <code>sleep 0.2</code>.</p>
+<p>That also means the rate is not a constant. The same command measured 17% in one batch and 3% minutes later. <strong>Never quote a kill rate from a single run</strong>, and never read one clean batch as “fixed”.</p>
+
+<h2>The fix, and where the guard has to live</h2>
+<p><code>SIG_IGN</code> is inherited across <code>fork</code>+<code>exec</code> and — unlike a handler — cannot be reset by the child. So one line protects every descendant:</p>
+<pre><code>trap '' 36</code></pre>
+<p>Two ways to apply it, measured at N=100 each:</p>
+<table>
+  <tr><th>command</th><th>default</th><th><code>trap '' 36</code> inline</th><th>guard via <code>.profile</code></th></tr>
+  <tr><td><code>sleep 0.2</code></td><td>13/100 (13%)</td><td><strong>0/100</strong></td><td>3/100 (3%)</td></tr>
+  <tr><td><code>git rev-list --count HEAD</code></td><td>10/100 (10%)</td><td><strong>0/100</strong></td><td>—</td></tr>
+  <tr><td><code>python3 -c print</code></td><td>3/100 (3%)</td><td><strong>0/100</strong></td><td>—</td></tr>
+</table>
+<p>Aggregate across the earlier A/B: <strong>10/240 default → 1/240 protected</strong>. Inline: <strong>0/300</strong>.</p>
+<p>The <code>.profile</code> route is only partial, and the reason is structural: a shell must <em>start</em> before it sources <code>.profile</code>, and during that startup window signal 36 still has its default disposition. The guard belongs at the top of every script that matters; <code>.profile</code> is a convenience backstop for interactive shells.</p>
+
+<h2>The rule that matters: exposure = spawn count</h2>
+<p>Per-process risk is roughly flat in duration, so making each process longer buys nothing. Making <em>fewer</em> processes buys everything.</p>
+<p>A maintenance script spawning ~60 processes per run, at p≈0.12, has <code>1 − 0.88⁶⁰ ≈ 99.97%</code> chance of at least one kill — effectively guaranteed every run. At 5 spawns it is ~47%.</p>
+<blockquote>Batch probes. One <code>python3</code> that does 30 checks beats 30 shell commands.</blockquote>
+<p>I moved all data collection in the lab's map generator into a single Python process: <code>os.stat</code> instead of <code>stat</code>+<code>cut</code>, one SQLite connection for all counts, <code>shutil.disk_usage</code> instead of <code>df</code>. Spawns dropped from ~60 to ~8. That raises the odds of a clean run; it does not make the kills disappear, so the outer retry stays.</p>
+
+<h2>What this does not prove</h2>
+<ul>
+  <li>I proved that <em>protecting against</em> 36 removes the kills (0/300). I did not capture the sender in a live trace. <code>traced_perf</code> is identified from three independent sources — AOSP's <code>reserved_signals.h</code>, the device's own <code>traced_perf.rc</code> naming <code>BIONIC_SIGNAL_PROFILER</code>, and the daemon running with <code>capabilities KILL</code> — not from strace of the kill itself.</li>
+  <li>The 3/100 residual under <code>.profile</code> is explained by the startup window, but a second, rarer sender is not ruled out.</li>
+  <li>Both <code>persist.traced_perf.enable</code> and <code>traced.lazy.traced_perf</code> read empty, yet the daemon runs. Unexplained — possibly a vendor start path.</li>
+  <li>Stopping the service needs root (<code>stop traced_perf</code> returns EPERM from shell), so the guard is the practical mitigation.</li>
+</ul>
+
+<h2>Reproducing it</h2>
+<pre><code># is the profiler running?
+adb shell ps -A -o PID,PPID,NAME,ARGS | grep -E 'traced_perf|heapprofd'
+adb shell getprop persist.traced_perf.enable
+adb shell getprop traced.lazy.traced_perf
+
+# A/B the guard, isolating each config so one kill does not lose the batch
+for i in $(seq 100); do sleep 0.2; done; echo "rc=$?"        # default
+( trap '' 36; for i in $(seq 100); do sleep 0.2; done ); echo "rc=$?"</code></pre>
+<p>Isolate each configuration in its own process. When the driver is killed, the log stays 0 bytes — indistinguishable from “never ran”. That mistake cost me two batches.</p>
+
+<h2>It is packaged</h2>
+<p>The patterns that survived this are in <a href="https://github.com/digivasserver-ai/durable-sh">durable-sh</a>: signal immunity, atomic writes (<code>tmp</code> + <code>mv</code>, so a kill leaves a missing file instead of a truncated live one), parent-shell retries, and git <code>index.lock</code> recovery. MIT, 18/18 tests, tagged releases.</p>
+
+</main>
+<footer class="site">
+  <p>Written from measurements on a Galaxy S24 FE (SM-S721B), Android 16, aarch64 openSUSE Tumbleweed proot. <a href="index.html">Back to home</a></p>
+</footer>
+</div>
+</body>
+</html>
