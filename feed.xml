@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom">
+  <title>Digivas — writing</title>
+  <subtitle>Evidence-first notes on Android, build systems and agent tooling.</subtitle>
+  <link href="https://digivasserver-ai.github.io/feed.xml" rel="self"/>
+  <link href="https://digivasserver-ai.github.io/"/>
+  <updated>2026-10-24T20:00:00Z</updated>
+  <id>https://digivasserver-ai.github.io/</id>
+  <author>
+    <name>Digivas</name>
+    <email>divivas.server@gmail.com</email>
+    <uri>https://digivasserver-ai.github.io/</uri>
+  </author>
+  <entry>
+    <title>Signal 36: the Android profiler that kills your shell scripts</title>
+    <link href="https://digivasserver-ai.github.io/signal-36.html"/>
+    <id>https://digivasserver-ai.github.io/signal-36.html</id>
+    <published>2026-10-24T20:00:00Z</published>
+    <updated>2026-10-24T20:00:00Z</updated>
+    <summary>Roughly one in eight short-lived processes on Android dies with exit 164. traced_perf sends BIONIC_SIGNAL_PROFILER (kernel signal 36), and the default disposition of a real-time signal is terminate. Measured kill rates, the spawn-count rule, the one-line fix, and what is still unexplained.</summary>
+  </entry>
+  <entry>
+    <title>Building Android apps on an ARM64 phone</title>
+    <link href="https://digivasserver-ai.github.io/arm64.html"/>
+    <id>https://digivasserver-ai.github.io/arm64.html</id>
+    <published>2026-10-24T19:00:00Z</published>
+    <updated>2026-10-24T19:00:00Z</updated>
+    <summary>Google's Linux Android SDK tools are x86-64 only. The aapt2 override, the compileSdk 37 hand-install, and the Gradle traps that cost the most time when building on an ARM64 device.</summary>
+  </entry>
+</feed>
