@@ -4,13 +4,21 @@
   <subtitle>Evidence-first notes on Android, build systems and agent tooling.</subtitle>
   <link href="https://digivasserver-ai.github.io/feed.xml" rel="self"/>
   <link href="https://digivasserver-ai.github.io/"/>
-  <updated>2026-10-24T20:00:00Z</updated>
+  <updated>2026-11-09T19:30:00Z</updated>
   <id>https://digivasserver-ai.github.io/</id>
   <author>
     <name>Digivas</name>
     <email>digivas.server@gmail.com</email>
     <uri>https://digivasserver-ai.github.io/</uri>
   </author>
+  <entry>
+    <title>Self-Maintaining AI Memory Layer</title>
+    <link href="https://digivasserver-ai.github.io/ai-memory-layer.html"/>
+    <id>https://digivasserver-ai.github.io/ai-memory-layer.html</id>
+    <published>2026-11-09T19:30:00Z</published>
+    <updated>2026-11-09T19:30:00Z</updated>
+    <summary>An AI that reads its own state, writes observations with confidence scores, evaluates past predictions, forms reasoning chains and persists to git — running autonomously as a supervised service on an Android phone in a proot. Architecture, ten observation types, built-in guardrails, and honest results.</summary>
+  </entry>
   <entry>
     <title>Signal 36: the Android profiler that kills your shell scripts</title>
     <link href="https://digivasserver-ai.github.io/signal-36.html"/>
