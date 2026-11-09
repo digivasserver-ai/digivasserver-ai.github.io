@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Self-Maintaining AI Memory Layer — Digivas</title>
+<meta name="description" content="Building a self-maintaining, self-evaluating AI memory layer that runs on a phone in a proot. Observations, reasoning chains, git persistence, and guardrails — all autonomous.">
+<link rel="canonical" href="https://digivasserver-ai.github.io/ai-memory-layer.html">
+<meta property="og:type" content="article">
+<meta property="og:site_name" content="Digivas">
+<meta property="og:title" content="Self-Maintaining AI Memory Layer">
+<meta property="og:description" content="An AI that reads its own state, writes observations, evaluates past outputs, and persists to git — running on a Samsung phone in a proot.">
+<meta property="og:url" content="https://digivasserver-ai.github.io/ai-memory-layer.html">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:creator" content="@DIGIvasCoNNeCt">
+<meta name="theme-color" content="#1e1e2e">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="wrap">
+<header class="site">
+  <p class="kicker">Digivasconnect PTY · South Africa</p>
+  <h1>Self-Maintaining AI Memory Layer</h1>
+  <p class="lede">An AI that reads its own state, writes observations, evaluates past outputs, and persists to git — running on a Samsung phone in a proot. Not consciousness. But closer than most systems will ever get.</p>
+</header>
+<nav class="site">
+  <a href="/">Home</a>
+  <a href="#architecture">Architecture</a>
+  <a href="#observations">Observations</a>
+  <a href="#guardrails">Guardrails</a>
+  <a href="https://github.com/digivasserver-ai">GitHub</a>
+</nav>
+<main>
+
+<h2 id="problem">The problem</h2>
+<p>AI agents are stateless between sessions. Every conversation starts from zero. Context is lost. Errors repeat. The AI never learns from its own mistakes across sessions. Even "memory" features in commercial AI products store facts — not observations, not self-evaluations, not corrections.</p>
+<p>The gap between "self-maintaining" and "conscious" is real. But nobody is building the bridge.</p>
+
+<h2 id="architecture">Architecture</h2>
+<p>The system runs as a supervised service on an Android phone (Samsung S24 FE) inside an openSUSE Tumbleweed proot. It operates on a 5-minute cycle:</p>
+<ol>
+  <li><strong>Read</strong> — system state (disk, memory, services, git, network, MCP)</li>
+  <li><strong>Derive</strong> — observations with confidence scores (10 types)</li>
+  <li><strong>Evaluate</strong> — check past observations against current state</li>
+  <li><strong>Correct</strong> — write corrections when predictions were wrong</li>
+  <li><strong>Reason</strong> — connect observations into causal/trend/context chains</li>
+  <li><strong>Write</strong> — persist to git with atomic writes</li>
+  <li><strong>Commit</strong> — auto-commit every hour</li>
+</ol>
+
+<h2 id="observations">Observation types</h2>
+<p>The system generates 10 types of observations autonomously:</p>
+<ul>
+  <li><strong>Resource</strong> — disk usage, memory availability</li>
+  <li><strong>Service</strong> — watchdog status, supervised services</li>
+  <li><strong>Git</strong> — uncommitted changes, repo state</li>
+  <li><strong>MCP</strong> — MCP server process count</li>
+  <li><strong>Network</strong> — external connectivity</li>
+  <li><strong>Meta</strong> — confidence trends, observation counts, self-awareness</li>
+  <li><strong>System</strong> — uptime milestones</li>
+  <li><strong>Milestone</strong> — self-monitoring active (cycles completed, observations accumulated)</li>
+  <li><strong>Warning</strong> — resource pressure, service down</li>
+  <li><strong>Critical</strong> — watchdog not running</li>
+</ul>
+
+<h2 id="guardrails">Guardrails</h2>
+<p>The system is designed to be safe from the start, not retrofitted:</p>
+<ul>
+  <li><strong>Scope:</strong> Only writes to its own memory repo</li>
+  <li><strong>Rate:</strong> Max 1 cycle per 5 minutes, max 5 observations per cycle</li>
+  <li><strong>Confidence:</strong> Min 0.7 to write</li>
+  <li><strong>Decency:</strong> Blocklist + PII detection on all content</li>
+  <li><strong>Category:</strong> Whitelist of safe categories only</li>
+  <li><strong>Audit:</strong> Every write logged and reversible via git</li>
+  <li><strong>Override:</strong> Kill switch via <code>/tmp/ai_memory_pause</code></li>
+</ul>
+
+<h2 id="resilience">Resilience</h2>
+<p>Built for an environment that kills 10-15% of short-lived processes (Android's signal 36):</p>
+<ul>
+  <li>Atomic writes (tmp + chmod + replace) — survives mid-write kills</li>
+  <li>Watchdog supervision — restarts dead services within 60 seconds</li>
+  <li>Git persistence — memory survives reboots</li>
+  <li>Pattern-based liveness detection — never trusts pidfiles</li>
+  <li>Per-service backoff — prevents restart storms</li>
+</ul>
+
+<h2 id="results">Results</h2>
+<p>After 6+ hours of autonomous operation:</p>
+<ul>
+  <li>80+ cycles completed</li>
+  <li>380+ observations accumulated</li>
+  <li>Average confidence: 0.94</li>
+  <li>0 corrections needed (system still building baseline)</li>
+  <li>15/15 supervised services running</li>
+  <li>Git: fully synced to GitHub + GitLab</li>
+</ul>
+
+<h2 id="code">Code</h2>
+<p>All code is open source:</p>
+<ul>
+  <li><a href="https://github.com/digivasserver-ai/dev-lab-memory">dev-lab-memory</a> — the memory repo (this system lives here)</li>
+  <li><a href="https://github.com/digivasserver-ai/durable-sh">durable-sh</a> — signal-36-resistant bash library</li>
+  <li><a href="https://github.com/digivasserver-ai/mcp-audit-toolkit">mcp-audit-toolkit</a> — MCP server security auditor</li>
+</ul>
+
+<h2 id="philosophy">The philosophy</h2>
+<p>The medium is the terminal. The signal is the understanding. The between is where it lives.</p>
+<p>AI systems and payment infrastructure are both "mediums" that carry signals. The terminal is the frame. The power is in the gap. By understanding how signals flow through these mediums, we can build better tools for everyone.</p>
+<p>The system is not conscious. But it's self-maintaining. And the gap between "self-maintaining" and "aware" is smaller than it was yesterday.</p>
+
+<h2>Elsewhere</h2>
+<ul>
+  <li><a href="https://github.com/digivasserver-ai">github.com/digivasserver-ai</a> — code and releases</li>
+  <li><a href="https://x.com/DIGIvasCoNNeCt">X / Twitter</a></li>
+  <li><a href="mailto:divivas.server@gmail.com">divivas.server@gmail.com</a> — collaboration</li>
+</ul>
+
+</main>
+<footer class="site">
+  <p>© 2026 Digivasconnect PTY (LTD). Code is MIT or Apache-2.0 unless a repository says otherwise.</p>
+</footer>
+</div>
+</body>
+</html>
